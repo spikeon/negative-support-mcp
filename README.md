@@ -6,44 +6,27 @@
 
 ## Requirements
 
-- Node.js **18+**
+- Node.js **18+** (ships with `npx`; no separate install step for the MCP itself)
 - A negative.support license token (`ns_live_…`) from [negative.support](https://negative.support/) after sign-in
 
-## Install and build
+## Quick start (paste into MCP config)
 
-```bash
-git clone https://github.com/spikeon/negative-support-mcp.git
-cd negative-support-mcp
-npm install
-npm run build
-```
+You do **not** need to clone the repo or run `npm install` in this project. Use **`npx`**: it downloads dependencies into a cache the first time, then reuses them.
 
-The compiled entry point is `dist/index.js`.
+Put your real token in `NEGATIVE_SUPPORT_TOKEN` (or drop that block and use the `negative_support_activate` tool instead).
 
-## Run
-
-```bash
-npm start
-```
-
-Or during development (no separate build step):
-
-```bash
-npm run dev
-```
-
-The server speaks **stdio** MCP; it is meant to be launched by an MCP host, not used interactively in a terminal.
-
-## Cursor (and similar) configuration
-
-Add a server entry that runs Node against the built file and passes your token via environment (recommended):
+### Install from GitHub (works today)
 
 ```json
 {
   "mcpServers": {
     "negative-support": {
-      "command": "node",
-      "args": ["/absolute/path/to/negative-support-mcp/dist/index.js"],
+      "command": "npx",
+      "args": [
+        "-y",
+        "--package=github:spikeon/negative-support-mcp",
+        "negative-support-mcp"
+      ],
       "env": {
         "NEGATIVE_SUPPORT_TOKEN": "ns_live_..."
       }
@@ -52,7 +35,51 @@ Add a server entry that runs Node against the built file and passes your token v
 }
 ```
 
-Alternatively, omit `NEGATIVE_SUPPORT_TOKEN` and call the `negative_support_activate` tool once per session with your token.
+On Windows, if `npx` is not found, try `"command": "npx.cmd"` with the same `args`.
+
+### Install from npm (after you publish this package)
+
+Once this package is published to npm as `negative-support-mcp` (`npm publish` from this repo, with an npm account that owns the name):
+
+```json
+{
+  "mcpServers": {
+    "negative-support": {
+      "command": "npx",
+      "args": ["-y", "negative-support-mcp"],
+      "env": {
+        "NEGATIVE_SUPPORT_TOKEN": "ns_live_..."
+      }
+    }
+  }
+}
+```
+
+Publishing is optional; the GitHub `npx` form above is enough for end users.
+
+## Why this works
+
+- **`dist/` is committed** so GitHub installs do not need TypeScript or a build step.
+- **`npx -y`** runs the `negative-support-mcp` binary from [`package.json` `bin`](./package.json); npm installs this package’s **runtime** `dependencies` automatically.
+- **`prepublishOnly`** rebuilds `dist/` before `npm publish` so the registry tarball stays in sync with source.
+
+## Development (contributors)
+
+```bash
+git clone https://github.com/spikeon/negative-support-mcp.git
+cd negative-support-mcp
+npm install
+npm run build
+npm start
+```
+
+Or with hot reload during development:
+
+```bash
+npm run dev
+```
+
+The server uses **stdio** MCP and is meant to be started by an MCP host.
 
 ## Tools
 
