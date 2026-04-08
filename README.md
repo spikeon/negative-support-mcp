@@ -57,6 +57,22 @@ Once this package is published to npm as `negative-support-mcp` (`npm publish` f
 
 Publishing is optional; the GitHub `npx` form above is enough for end users.
 
+### Releasing to npm (maintainers)
+
+Pushes to `main` do **not** publish. A [workflow](.github/workflows/publish-npm.yml) runs **`npm publish`** when you push a **version tag** matching `v*`.
+
+1. In [npm](https://www.npmjs.com/), create an **Automation** access token (or Granular Access Token with publish permission for this package).
+2. In the GitHub repo: **Settings → Secrets and variables → Actions → New repository secret** → name **`NPM_TOKEN`**, value = that token.
+3. On `main`, set **`version`** in [`package.json`](./package.json) to the release you want (for example `1.0.1`), commit, and push.
+4. Tag and push (the tag must match the version you intend to ship, conventionally `v` + semver):
+
+   ```bash
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```
+
+The workflow checks out the tag, runs `npm ci`, then `npm publish` (which runs `prepublishOnly` → `npm run build`). Each new version on npm must be **unique**; bump `package.json` before every release.
+
 ## Why this works
 
 - **`dist/` is committed** so GitHub installs do not need TypeScript or a build step.
