@@ -1,0 +1,36 @@
+{
+  "name": "negative-support-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "negative-support-mcp": "dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "negative-support",
+    "3d-printing",
+    "stl"
+  ],
+  "author": "",
+  "license": "MIT",
+  "description": "MCP server for the negative.support support-generation API (STL/OBJ/STEP)",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "negative-support": "^0.4.10",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
