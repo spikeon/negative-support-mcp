@@ -39,14 +39,14 @@ On Windows, if `npx` is not found, try `"command": "npx.cmd"` with the same `arg
 
 ### Install from npm (after you publish this package)
 
-Once this package is published to npm as `negative-support-mcp` (`npm publish` from this repo, with an npm account that owns the name):
+Once this package is published to npm as [`@spikeonstudio/negative-support-mcp`](https://www.npmjs.com/package/@spikeonstudio/negative-support-mcp) (under the **spikeonstudio** npm org/user):
 
 ```json
 {
   "mcpServers": {
     "negative-support": {
       "command": "npx",
-      "args": ["-y", "negative-support-mcp"],
+      "args": ["-y", "@spikeonstudio/negative-support-mcp"],
       "env": {
         "NEGATIVE_SUPPORT_TOKEN": "ns_live_..."
       }
@@ -61,7 +61,7 @@ Publishing is optional; the GitHub `npx` form above is enough for end users.
 
 Pushes to `main` do **not** publish. A [workflow](.github/workflows/publish-npm.yml) runs **`npm publish`** when you push a **version tag** matching `v*`.
 
-1. In [npm](https://www.npmjs.com/), create an **Automation** access token (or Granular Access Token with publish permission for this package).
+1. In [npm](https://www.npmjs.com/), create an **Automation** access token (or Granular Access Token with **publish** permission for **`@spikeonstudio/negative-support-mcp`**, or for all packages under the **spikeonstudio** user/org).
 2. In the GitHub repo: **Settings → Secrets and variables → Actions → New repository secret** → name **`NPM_TOKEN`**, value = that token.
 3. On `main`, set **`version`** in [`package.json`](./package.json) to the release you want (for example `1.0.1`), commit, and push.
 4. Tag and push (the tag must match the version you intend to ship, conventionally `v` + semver):

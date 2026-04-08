@@ -1,7 +1,10 @@
 {
-  "name": "negative-support-mcp",
-  "version": "1.0.0",
+  "name": "@spikeonstudio/negative-support-mcp",
+  "version": "1.0.1",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "bin": {
     "negative-support-mcp": "dist/index.js"
@@ -29,7 +32,7 @@
     "3d-printing",
     "stl"
   ],
-  "author": "",
+  "author": "spikeonstudio",
   "license": "MIT",
   "description": "MCP server for the negative.support support-generation API (STL/OBJ/STEP)",
   "dependencies": {

@@ -20,6 +20,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npm publish
+      # Scoped @spikeonstudio/* packages must be published as public (also set in package.json publishConfig).
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
