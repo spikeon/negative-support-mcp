@@ -62,6 +62,12 @@ On Windows, if `npx` is missing, use `"command": "npx.cmd"` with the same `args`
 
 **Resource:** `negative-support://docs` — short in-server summary.
 
+## Timeouts
+
+Generation can take **several minutes** on large meshes. Many MCP clients use a default tool timeout (often around 60s) unless the call stays “active.” This server emits MCP **`notifications/progress`** when the client sends a **`progressToken`** with the tool request (about every 15s plus throttled updates from the library), which usually **refreshes** that timeout.
+
+If a host still cuts you off, use the [`negative-support` CLI](https://negative.support/docs) for huge models, or raise the tool-timeout in your client if it exposes one.
+
 ## Development
 
 ```bash

@@ -6,6 +6,8 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, basename, extname, join, resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import * as z from "zod/v4";
 import {
   activate,
@@ -44,6 +46,62 @@ async function modelMeshFor3mf(
 
 let licenseActive = false;
 
+/** MCP clients often use ~60s tool timeouts; `notifications/progress` resets them when a progressToken is sent. */
+const PROGRESS_HEARTBEAT_MS = 15_000;
+const PROGRESS_THROTTLE_MS = 800;
+
+function createProgressReporter(
+  extra: RequestHandlerExtra<ServerRequest, ServerNotification>
+) {
+  const token = extra._meta?.progressToken;
+  let seq = 0;
+  let lastThrottle = 0;
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+
+  const ping = (message: string) => {
+    if (token === undefined) return;
+    seq += 1;
+    void extra
+      .sendNotification({
+        method: "notifications/progress",
+        params: {
+          progressToken: token,
+          progress: seq,
+          message: message.slice(0, 500),
+        },
+      })
+      .catch(() => {
+        /* ignore: client may not subscribe */
+      });
+  };
+
+  const pingThrottled = (message: string) => {
+    if (token === undefined) return;
+    const now = Date.now();
+    if (now - lastThrottle < PROGRESS_THROTTLE_MS) return;
+    lastThrottle = now;
+    ping(message);
+  };
+
+  const startHeartbeat = () => {
+    if (token === undefined) return;
+    heartbeat = setInterval(() => {
+      ping(
+        "Still generating supports (large meshes can take several minutes)…"
+      );
+    }, PROGRESS_HEARTBEAT_MS);
+  };
+
+  const stop = () => {
+    if (heartbeat !== undefined) {
+      clearInterval(heartbeat);
+      heartbeat = undefined;
+    }
+  };
+
+  return { ping, pingThrottled, startHeartbeat, stop };
+}
+
 async function ensureLicense(): Promise<void> {
   const envToken = process.env.NEGATIVE_SUPPORT_TOKEN;
   if (!licenseActive && envToken) {
@@ -74,6 +132,9 @@ const server = new McpServer(
   {
     instructions:
       "Wrappers for https://negative.support — generate negative-space 3D print supports from STL/OBJ/STEP files on disk. Set NEGATIVE_SUPPORT_TOKEN or call negative_support_activate. Use negative_support_generate with an absolute input_path on the host running the server.",
+    capabilities: {
+      logging: {},
+    },
   }
 );
 
@@ -152,7 +213,7 @@ server.registerTool(
   "negative_support_generate",
   {
     description:
-      "Generate support STL (and optionally 3MF with model + support pieces) from a local STL, OBJ, STEP, or STP file. Requires an activated license.",
+      "Generate support STL (and optionally 3MF with model + support pieces) from a local STL, OBJ, STEP, or STP file. Requires an activated license. Heavy meshes can take many minutes; MCP hosts that send a progressToken receive keepalive progress and avoid tool timeouts.",
     inputSchema: {
       input_path: z
         .string()
@@ -198,16 +259,19 @@ server.registerTool(
       progress: z.array(z.string()).optional(),
     },
   },
-  async ({
-    input_path,
-    output_stl_path,
-    output_3mf_path,
-    format: formatArg,
-    margin,
-    angle,
-    min_volume,
-    skip_merge,
-  }) => {
+  async (
+    {
+      input_path,
+      output_stl_path,
+      output_3mf_path,
+      format: formatArg,
+      margin,
+      angle,
+      min_volume,
+      skip_merge,
+    },
+    extra
+  ) => {
     await ensureLicense();
     const inputPath = resolve(input_path);
     if (!existsSync(inputPath)) {
@@ -235,16 +299,42 @@ server.registerTool(
     const fileBuf = readFileSync(inputPath);
     const arrayBuffer = toArrayBuffer(fileBuf);
     const progress: string[] = [];
-    const result = await generateSupports(arrayBuffer, {
-      format,
-      margin,
-      angle,
-      minVolume: min_volume,
-      skipMerge: skip_merge,
-      onProgress: (step, detail) => {
-        progress.push(detail ? `${step}: ${detail}` : step);
-      },
+    const reporter = createProgressReporter(extra);
+    reporter.ping("Starting support generation…");
+    reporter.startHeartbeat();
+
+    const abortPromise = new Promise<never>((_, reject) => {
+      if (extra.signal.aborted) {
+        reject(new Error("Support generation cancelled"));
+        return;
+      }
+      extra.signal.addEventListener(
+        "abort",
+        () => reject(new Error("Support generation cancelled")),
+        { once: true }
+      );
     });
+
+    let result: Awaited<ReturnType<typeof generateSupports>>;
+    try {
+      result = await Promise.race([
+        generateSupports(arrayBuffer, {
+          format,
+          margin,
+          angle,
+          minVolume: min_volume,
+          skipMerge: skip_merge,
+          onProgress: (step, detail) => {
+            const line = detail ? `${step}: ${detail}` : step;
+            progress.push(line);
+            reporter.pingThrottled(line);
+          },
+        }),
+        abortPromise,
+      ]);
+    } finally {
+      reporter.stop();
+    }
 
     const baseName = basename(inputPath, extname(inputPath));
     const dir = dirname(inputPath);
@@ -257,10 +347,19 @@ server.registerTool(
 
     let threeMfOut: string | undefined;
     if (output_3mf_path != null && output_3mf_path.length > 0) {
-      threeMfOut = resolve(output_3mf_path);
-      const modelMesh = await modelMeshFor3mf(arrayBuffer, format);
-      const mfBuf = export3MF(modelMesh, result.supportPieces);
-      writeFileSync(threeMfOut, Buffer.from(mfBuf));
+      reporter.ping("Writing 3MF…");
+      reporter.startHeartbeat();
+      try {
+        threeMfOut = resolve(output_3mf_path);
+        const modelMesh = await Promise.race([
+          modelMeshFor3mf(arrayBuffer, format),
+          abortPromise,
+        ]);
+        const mfBuf = export3MF(modelMesh, result.supportPieces);
+        writeFileSync(threeMfOut, Buffer.from(mfBuf));
+      } finally {
+        reporter.stop();
+      }
     }
 
     const structuredContent = {
