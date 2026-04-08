@@ -1,6 +1,6 @@
 {
   "name": "@spikeonstudio/negative-support-mcp",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -37,6 +37,7 @@
   "description": "MCP server for the negative.support support-generation API (STL/OBJ/STEP)",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^16.4.7",
     "negative-support": "^0.4.10",
     "zod": "^4.3.6"
   },

@@ -12,9 +12,13 @@
 - Node.js **18+**
 - A negative.support token (`ns_live_…`) from [negative.support](https://negative.support/) after sign-in
 
+For a **local clone**, you can put `NEGATIVE_SUPPORT_TOKEN=…` in a **`.env`** file next to `package.json` (see [`.env.example`](./.env.example)). The server loads it via `dotenv` when the process working directory is that folder. **Do not commit `.env`** — it is listed in `.gitignore`.
+
 ## MCP configuration
 
 Use **`npx`** — no clone or local `npm install` required. Set `NEGATIVE_SUPPORT_TOKEN`, or omit it and call `negative_support_activate` once per session.
+
+`npx` normally runs with another cwd, so prefer **`env` in the MCP JSON** for Cursor; use **`.env`** when you run `npm run dev` / `npm start` from this repo.
 
 **npm (default)**
 

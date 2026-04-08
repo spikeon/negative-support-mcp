@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import "dotenv/config";
 /**
  * MCP server wrapping the negative-support npm API (https://negative.support/docs).
  */
