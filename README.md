@@ -63,12 +63,12 @@ Pushes to `main` do **not** publish. A [workflow](.github/workflows/publish-npm.
 
 1. In [npm](https://www.npmjs.com/), create an **Automation** access token (or Granular Access Token with **publish** permission for **`@spikeonstudio/negative-support-mcp`**, or for all packages under the **spikeonstudio** user/org).
 2. In the GitHub repo: **Settings → Secrets and variables → Actions → New repository secret** → name **`NPM_TOKEN`**, value = that token.
-3. On `main`, set **`version`** in [`package.json`](./package.json) to the release you want (for example `1.0.1`), commit, and push.
+3. On `main`, set **`version`** in [`package.json`](./package.json) to the release you want (for example `1.0.2`), commit, and push.
 4. Tag and push (the tag must match the version you intend to ship, conventionally `v` + semver):
 
    ```bash
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag v1.0.2
+   git push origin v1.0.2
    ```
 
 The workflow checks out the tag, runs `npm ci`, then `npm publish` (which runs `prepublishOnly` → `npm run build`). Each new version on npm must be **unique**; bump `package.json` before every release.
